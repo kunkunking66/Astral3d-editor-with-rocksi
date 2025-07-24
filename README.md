@@ -191,7 +191,7 @@ VITE_PROXY_URL=http://127.0.0.1:8080
 ```
 
 ---
-### 1. 前端环境变量 `.env.development`
+### 2. 前端环境变量 `.env.development`
 
 放在 `Astral3DEditor/.env.development` 目录(Ctrl+H)，示例：
 
@@ -283,7 +283,33 @@ VITE v5.0.12  ready in xxx ms
 
 * 浏览器访问 `http://localhost:3000`，显示3D编辑器页面，无报错。
 
----
+
+## 启动 Rocksi
+
+1. 进入 Rocksi 项目目录：
+
+```bash
+cd ~/astral3d-editor-with-rocksi/Rocksi-master
+````
+
+2. 启动开发服务器：
+
+```bash
+npm run dev
+```
+
+3. 终端会显示如下信息：
+
+```
+> robotsim@1.0.0 dev
+> parcel serve ./index.html --out-dir dist/dev/
+
+Server running at http://localhost:1234
+```
+
+4. 此时，Rocksi 已启动成功，可以集成到原本的 `http://localhost:3000/` 中进行使用。
+
+
 
 ## 常见问题与解决方案
 
