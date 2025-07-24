@@ -235,7 +235,9 @@ sudo systemctl status mysql
 进入后端目录：
 
 ```bash
-cd Astral3DEditorGoBack
+echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.bashrc
+source ~/.bashrc
+which bee
 bee run
 ```
 
