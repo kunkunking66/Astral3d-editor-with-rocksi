@@ -255,6 +255,7 @@ go install github.com/beego/bee/v2@latest
 
 ```bash
 cd ../Astral3DEditor
+(npm install --legacy-peer-deps)
 npm run dev
 ```
 
@@ -297,6 +298,7 @@ cd ~/astral3d-editor-with-rocksi/Rocksi-master
 2. 启动开发服务器：
 
 ```bash
+(npm install --legacy-peer-deps)
 npm run dev
 ```
 
