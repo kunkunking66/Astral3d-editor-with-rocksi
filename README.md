@@ -313,6 +313,14 @@ Server running at http://localhost:1234
 
 4. 此时，Rocksi 已启动成功，可以集成到原本的 `http://localhost:3000/` 中进行使用。
 
+## 一键启动启动 Rocksi&Astral3d-editor&bee后端
+```bash
+cd ~/Astral3d-editor-with-rocksi
+chmod +x start-all.sh
+./start-all.sh
+```
+
+
 
 
 ## 常见问题与解决方案
