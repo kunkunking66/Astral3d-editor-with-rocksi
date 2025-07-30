@@ -350,3 +350,132 @@ chmod +x start-all.sh
 
 ---
 
+以下是你可以直接放入 `README.md` 中的 Markdown 格式说明，记录如何为 Rocksi 增加一个新的 Blockly Block（以 `suspend` 为例）：
+
+---
+
+## 🧩 如何添加一个自定义 Blockly Block（以 `suspend` 为例）
+
+为 Rocksi 编辑器添加自定义 Blockly Block，需要在多个文件中协调定义 UI、代码生成、语言包和执行逻辑。以下是完整步骤：
+
+---
+
+### 📁 1. 创建 Block 配置文件
+
+**路径**：`src/blockly/blocks/extras/suspend.json`
+
+```json
+{
+  "type": "suspend",
+  "message0": "%{BKY_ROCKSI_BLOCK_SUSPEND}",
+  "tooltip": "%{BKY_ROCKSI_BLOCK_SUSPEND_TOOLTIP}",
+  "previousStatement": null,
+  "nextStatement": null,
+  "colour": 230
+}
+```
+
+---
+
+### ⚙️ 2. 定义代码生成器
+
+**路径**：`src/blockly/generators/javascript.js`
+
+```js
+Blockly.JavaScript["suspend"] = function (block) {
+    return 'Simulation.instance.suspend();\n';
+};
+```
+
+---
+
+### 🌐 3. 添加语言包词条
+
+#### 英文：`src/i18n/blockly_en.js`
+
+```js
+export const BlocklyCustomEN = {
+  // ...
+  ROCKSI_BLOCK_SUSPEND: "Suspend program",
+  ROCKSI_BLOCK_SUSPEND_TOOLTIP: "Temporarily stop program execution",
+};
+```
+
+#### 德文（可选）：`src/i18n/blockly_de.js`
+
+```js
+export const BlocklyCustomDE = {
+  // ...
+  ROCKSI_BLOCK_SUSPEND: "Programm anhalten",
+  ROCKSI_BLOCK_SUSPEND_TOOLTIP: "Hält das Programm temporär an",
+};
+```
+
+⚠️ 注意：不要加 `BKY_` 前缀，Blockly 会自动加。
+
+---
+
+### 🧠 4. 实现逻辑方法
+
+**路径**：`src/simulator/simulation.js`
+在 `TheSimulation` 类中添加：
+
+```js
+suspend() {
+    console.log('> Suspending simulation...');
+    this.cancel();
+}
+```
+
+---
+
+### 🤖 5. 注册 Interpreter API
+
+**路径**：`src/blockly/blockly.js`
+
+```js
+const simObj = interpreter.createObjectProto(interpreter.OBJECT);
+const simInstance = interpreter.createObjectProto(interpreter.OBJECT);
+
+interpreter.setProperty(simInstance, 'suspend',
+    interpreter.createNativeFunction(() => {
+        simulation.suspend();
+    })
+);
+
+interpreter.setProperty(simObj, 'instance', simInstance);
+interpreter.setProperty(globalObject, 'Simulation', simObj);
+```
+
+---
+
+### 🧰 6. 加入 Toolbox 工具箱
+
+**路径**：`src/blockly/toolbox.xml`
+
+```xml
+<block type="suspend"></block>
+```
+
+---
+
+## ✅ 总结表格
+
+| 文件路径                         | 作用                 | 内容摘要                             |
+| ---------------------------- | ------------------ | -------------------------------- |
+| `blocks/extras/suspend.json` | Block 的结构定义        | `%{BKY_ROCKSI_BLOCK_SUSPEND}`    |
+| `generators/javascript.js`   | 生成 JS 代码           | `Simulation.instance.suspend();` |
+| `i18n/blockly_en.js`         | 英文词条               | `ROCKSI_BLOCK_SUSPEND` 等         |
+| `simulation.js`              | 模拟器执行逻辑            | 添加 `suspend()` 方法                |
+| `blockly.js`                 | 注册 Interpreter API | `interpreter.setProperty`        |
+| `toolbox.xml`                | 将 Block 显示到编辑器中    | `<block type="suspend" />`       |
+
+---
+
+如需快速批量添加类似结构的 Block，可以编写模板生成脚本自动完成上述步骤。
+
+---
+
+如果你想我再帮你生成其他 Block 的模板，或写一个 CLI 工具统一添加词条、模板和 JS 逻辑，也可以告诉我。
+
+
