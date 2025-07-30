@@ -224,6 +224,14 @@ class TheSimulation {
         });
     }
 
+    suspend() {
+    console.log('> Suspending simulation');
+
+    this.cancel();  // 可选，暂停所有动画
+    this.reset();   // 可选，重置状态（视场景需要）
+    alert('Simulation suspended');  // 可替换为UI提示或其他逻辑
+    }
+
 
     move(poseType, pose) {
         if (!pose) {

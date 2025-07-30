@@ -329,6 +329,20 @@ function simulationAPI(interpreter, globalObject) {
     }
     interpreter.setProperty(globalObject, 'robot',
         interpreter.createNativeFunction(wrapper));
+    
+    // ✅ 新增 suspend 支持
+    const simObj = interpreter.createObjectProto(interpreter.OBJECT);
+    const simInstance = interpreter.createObjectProto(interpreter.OBJECT);
+
+    // 注册 Simulation.instance.suspend
+    interpreter.setProperty(simInstance, 'suspend',
+        interpreter.createNativeFunction(() => {
+            simulation.suspend();  // 直接使用上面 getInstance() 拿到的 simulation 实例
+        })
+    );
+
+    interpreter.setProperty(simObj, 'instance', simInstance);
+    interpreter.setProperty(globalObject, 'Simulation', simObj);
 }
 
 

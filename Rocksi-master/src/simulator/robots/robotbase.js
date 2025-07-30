@@ -67,7 +67,7 @@ export default class Robot {
             // joint_1: -0.11,
         },
         
-        // Location of the handle used for moving the robot
+        // Location of the handle used for Moving the robot
         this.tcp = {
             parent: "",
             // Distance and euler angles from hand origin to finger tip
@@ -76,7 +76,7 @@ export default class Robot {
             object: new Object3D(),  // Filled by init()
         };
     
-        // Joint names that the robot is allowed to use for moving
+        // Joint names that the robot is allowed to use for Moving
         this.ikEnabled = [
             // "joint_1", "joint_2", ...
         ];

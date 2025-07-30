@@ -54,6 +54,7 @@
     <category name="%{BKY_ROCKSI_CATEGORY_EXTRAS}" categorystyle="extras_category">
         <block type="comment"></block>
         <block type="wait"></block>
+        <block type="suspend"></block>
         <block type="set_speed"></block>
         <block type="joint_lock"></block>
         <block type="joint_unlock"></block>

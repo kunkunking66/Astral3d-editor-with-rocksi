@@ -437,7 +437,7 @@ var openRequests = /*#__PURE__*/(function () {
 
 /**
  * Define a module of code that will be executed with a web worker. This provides a simple
- * interface for moving chunks of logic off the main thread, and managing their dependencies
+ * interface for Moving chunks of logic off the main thread, and managing their dependencies
  * among one another.
  *
  * @param {object} options

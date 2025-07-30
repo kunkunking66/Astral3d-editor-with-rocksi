@@ -109,6 +109,10 @@ Blockly.JavaScript["wait"] = function (block) {
 	return 'robot("wait", ' + (time * 1000) + ');\n';
 };
 
+Blockly.JavaScript["suspend"] = function (block) {
+    return 'Simulation.instance.suspend();\n';
+};
+
 Blockly.JavaScript["set_speed"] = function (block) {
 	var motion = block.getFieldValue('MOTION_TYPE');
 	var speed = block.getFieldValue('SPEED');
