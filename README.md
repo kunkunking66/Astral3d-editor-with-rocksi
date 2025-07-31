@@ -354,7 +354,7 @@ chmod +x start-all.sh
 
 ---
 
-## 🧩 如何添加一个自定义 Blockly Block（以 `suspend` 为例）
+## 🧩 开发一：如何添加一个自定义 Blockly Block（以 `suspend` 为例）
 
 为 Rocksi 编辑器添加自定义 Blockly Block，需要在多个文件中协调定义 UI、代码生成、语言包和执行逻辑。以下是完整步骤：
 
@@ -458,6 +458,114 @@ interpreter.setProperty(globalObject, 'Simulation', simObj);
 ```
 
 ---
+
+以下是你为 **实现 Rocksi 支持多个可选机器人模型加载** 所进行的修改，已整理成 `README.md` 格式，适合你直接加入仓库说明文档中。
+
+---
+
+## 🧩 开发二：多机器人模型选择支持说明（Robot Selector Support）
+
+通过本功能，用户可以在页面上通过下拉菜单选择不同的机器人模型进行加载与控制，无需手动修改代码或刷新参数。
+
+---
+
+### 📁 目录结构约定
+
+所有可加载模型均位于路径：
+
+```
+/Rocksi-master/assets/models/
+```
+
+每个模型文件夹必须包含如 `cfg`, `meshes`, `launch`, `package.xml` 等 ROS/URDF 结构。
+
+例如现已支持的模型有：
+
+```bash
+franka_description
+niryo_robot_description
+sawyer_description
+```
+
+---
+
+### ✅ 修改记录
+
+#### 1. 修改 `index.html`
+
+在 `<body>` 内合适位置（如 `.main-container` 前）添加如下 HTML 片段，用于前端选择模型：
+
+```html
+<!-- Robot Selector UI -->
+<div id="robot-selector" style="position: fixed; top: 10px; left: 10px; z-index: 9999; background: white; padding: 5px 10px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);">
+  <label for="robotSelect" style="margin-right: 6px;">Robot:</label>
+  <select id="robotSelect">
+    <option value="niryo_robot_description">Niryo</option>
+    <option value="franka_description">Franka</option>
+    <option value="sawyer_description">Sawyer</option>
+  </select>
+</div>
+```
+
+---
+
+#### 2. 修改 `src/index.js`
+
+在文件底部添加以下 JavaScript 逻辑：
+
+```js
+$(document).ready(function () {
+    // 设置默认选中项
+    const params = new URLSearchParams(window.location.search);
+    const selectedRobot = params.get('robot') || 'niryo_robot_description';
+    document.getElementById('robotSelect').value = selectedRobot;
+
+    // 切换模型并刷新页面
+    document.getElementById('robotSelect').addEventListener('change', function (e) {
+        const newRobot = e.target.value;
+        const newParams = new URLSearchParams(window.location.search);
+        newParams.set('robot', newRobot);
+        window.location.search = newParams.toString();  // 页面重载
+    });
+});
+```
+
+---
+
+#### 3. `src/helpers.js`（无需修改）
+
+默认逻辑已存在，自动读取 URL 参数：
+
+```js
+export function getDesiredRobot() {
+    let params = new URLSearchParams(location.search);
+    return params.get('robot') || 'niryo';
+}
+```
+
+确保使用该函数加载机器人配置。
+
+---
+
+### ✅ 使用说明
+
+* 初始加载默认使用 `niryo_robot_description`
+* 用户可通过页面左上角下拉菜单切换模型
+* 页面刷新后即加载对应模型（参数写入 `?robot=xxx`）
+
+---
+
+### 📌 后续建议（可选）
+
+* 未来支持自动遍历 `assets/models/` 动态生成 `<option>`（需构建阶段生成）
+* 可将用户上次选择持久化（例如用 `localStorage`）
+
+---
+
+如需帮助添加自动扫描模型目录或扩展为支持机械车、视觉模型等，请继续提 issue 或完善脚本。
+
+是否需要我也写一个中英文双语版 `README`？
+
 
 ## ✅ 总结表格
 
