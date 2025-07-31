@@ -10,6 +10,10 @@ import (
 )
 
 func init() {
+	err := beego.LoadAppConfig("ini", "conf/app.conf")
+	if err != nil {
+		panic("❌ 加载配置文件失败: " + err.Error())
+	}
 	orm.Debug = true
 
 	if err1 := orm.RegisterDriver("mysql", orm.DRMySQL); err1 != nil {
