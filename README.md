@@ -52,33 +52,119 @@ sudo systemctl enable mysql
 
 ---
 
-### 3. 配置 MySQL root 用户（解决auth\_socket权限问题）
+好的，以下是**完整且推荐的数据库配置与初始化流程文档**，已按照你指定的 `sql::conn` 字符串及导入指令进行统一整理，适合直接写入 `docs/mysql-setup.md` 或团队内部 Wiki。
+
+---
+
+# 🛠️ Astral3DEditor 项目数据库配置指南（MySQL）
+
+适用于后端使用 Beego 框架 + MySQL 的项目部署环境。
+
+---
+
+## 1️⃣ 安装并启动 MySQL（Ubuntu）
 
 ```bash
-sudo mysql
-
--- 查看 root 账户认证插件
-SELECT user, host, plugin FROM mysql.user WHERE user = 'root';
-
--- 修改 root 用户认证为密码模式
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '你的密码';
-FLUSH PRIVILEGES;
-EXIT;
+sudo apt update
+sudo apt install mysql-server
+sudo service mysql start
 ```
 
 ---
 
-### 4. 创建项目数据库和用户
+## 2️⃣ 登录 MySQL 控制台
 
 ```bash
-mysql -u root -p --socket=/var/run/mysqld/mysqld.sock
-
-CREATE DATABASE astral2d CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-CREATE USER 'astral'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON astral2d.* TO 'astral'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
+mysql -u root -p
 ```
+
+---
+
+## 3️⃣ 创建数据库与用户（推荐配置）
+
+在 MySQL 控制台中依次执行以下命令：
+
+```sql
+-- 创建数据库
+CREATE DATABASE IF NOT EXISTS astral3d
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+-- 删除旧用户（如存在）
+DROP USER IF EXISTS 'astral'@'localhost';
+DROP USER IF EXISTS 'astral'@'127.0.0.1';
+
+-- 创建新用户（推荐强密码）
+CREATE USER 'astral'@'localhost' IDENTIFIED BY 'Astral@2025!';
+
+-- 授权访问
+GRANT ALL PRIVILEGES ON astral3d.* TO 'astral'@'localhost';
+
+-- 应用权限
+FLUSH PRIVILEGES;
+```
+
+---
+
+## 4️⃣ 配置后端数据库连接（`app.conf`）
+
+修改文件路径：
+
+```ini
+Astral3DEditorGoBack/conf/app.conf
+```
+
+确认配置如下（✅ 推荐配置）：
+
+```ini
+[sql]
+conn = "astral:Astral@2025!@tcp(127.0.0.1:3306)/astral3d?charset=utf8mb4&parseTime=true&loc=Local"
+```
+
+> ⚠️ 注意密码中含 `@` 等特殊字符时，务必完整写在配置项中，避免 Go 后端连接失败。
+
+---
+
+## 5️⃣ 导入数据库结构（初始表）
+
+确保你有初始化 SQL 文件：
+
+```
+static/sql/astral-3d-editor.sql
+```
+
+在Astral3DEditorGoBack目录下运行：
+
+```bash
+mysql -uastral -pAstral@2025! astral3d < static/sql/astral-3d-editor.sql
+```
+
+> ✅ 成功导入后，可在数据库中查看表结构和初始数据是否正确。
+
+---
+
+
+## 7️⃣ 常见问题排查
+
+| 问题                            | 可能原因                    | 解决建议                           |
+| ----------------------------- | ----------------------- | ------------------------------ |
+| `Access denied for user`      | 密码错误 / host 不匹配 / 权限未刷新 | 重设用户并执行 `FLUSH PRIVILEGES;`    |
+| `Unknown database`            | 数据库名拼写错误 / 未创建          | 执行 `CREATE DATABASE astral3d;` |
+| `connect: connection refused` | MySQL 未启动               | 执行 `sudo service mysql start`  |
+| 密码中含 `@`                      | 没有 URL 编码或配置不规范         | 建议密码不包含特殊符号，或将整个连接字符串用引号包裹     |
+
+---
+
+## ✅ 推荐配置汇总
+
+| 项目项       | 内容                                                                                                      |
+| --------- | ------------------------------------------------------------------------------------------------------- |
+| 数据库名      | `astral3d`                                                                                              |
+| 用户名       | `astral`                                                                                                |
+| 密码        | `Astral@2025!`                                                                                          |
+| Beego 配置  | `sql::conn = astral:Astral@2025!@tcp(127.0.0.1:3306)/astral3d?charset=utf8mb4&parseTime=true&loc=Local` |
+| SQL 初始化路径 | `static/sql/astral-3d-editor.sql`                                                                       |
+
 
 ---
 
@@ -126,50 +212,8 @@ cd Astral3d-editor-with-rocksi
 Astral3d-editor-with-rocksi/
 ├── Astral3DEditor/            # 前端代码（Vue + Vite）
 ├── Astral3DEditorGoBack/      # 后端代码（Go + Beego）
-└── Rocksi-master              # 暂未修改 (html)
+└── Rocksi-master              # 已嵌入 (html + js)
 └── README.md
-```
-
----
-
-## 数据库配置与建表
-
-### 1. 修改后端数据库配置
-
-在 `Astral3DEditorGoBack/conf/app.conf` 中配置数据库连接：
-
-```ini
-db_driver=mysql
-db_user=astral
-db_password=your_password
-db_name=astral2d
-db_host=127.0.0.1
-db_port=3306
-```
-
----
-
-### 2. 建表 SQL
-
-登录 MySQL 后执行：
-
-```sql
-CREATE TABLE lb_3d_editor_scenes (
-  id VARCHAR(255) NOT NULL PRIMARY KEY COMMENT '主键ID,UUID',
-  sceneType VARCHAR(24) DEFAULT NULL COMMENT '场景类型',
-  hasDrawing INT NOT NULL COMMENT '场景是否包含图纸 0:false 1:true',
-  sceneIntroduction VARCHAR(255) DEFAULT NULL COMMENT '场景描述',
-  sceneName VARCHAR(255) DEFAULT NULL COMMENT '场景名称',
-  sceneVersion INT NOT NULL COMMENT '场景版本',
-  zip VARCHAR(128) NOT NULL COMMENT '场景zip包',
-  zipSize VARCHAR(32) NOT NULL COMMENT '场景zip包大小',
-  coverPicture TEXT NOT NULL COMMENT '保存场景时自动生成的封面图url',
-  exampleSceneId VARCHAR(255) DEFAULT NULL COMMENT '示例模板项目ID，null代表空项目创建',
-  projectType INT NOT NULL COMMENT '项目类型。0：Web3D-THREE 1：WebGIS-Cesium',
-  cesiumConfig VARCHAR(1000) DEFAULT NULL COMMENT 'WebGIS-Cesium 类型项目的基础Cesium配置',
-  updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  createTime DATETIME DEFAULT NULL COMMENT '创建时间'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='3D编辑场景表';
 ```
 
 ---
