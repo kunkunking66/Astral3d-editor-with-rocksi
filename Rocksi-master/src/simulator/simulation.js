@@ -98,6 +98,11 @@ class TheSimulation {
             'gripper_close': sim.gripper_close,
             'gripper_open': sim.gripper_open,
             'joint_absolute': sim.joint_absolute,
+            'go2_walk': sim.go2_walk,
+            'go2_pose': sim.go2_pose,
+            'go2_leg_control': sim.go2_leg_control,
+            'go2_physics': sim.go2_physics,
+            'go2_sensor': sim.go2_sensor,
             'joint_relative': sim.joint_relative,
             'startPhysicalBody': sim.startPhysicalBody,
             'getPhysicsDone': sim.getPhysicsDone,
@@ -518,6 +523,109 @@ class TheSimulation {
         if (this.running) {
             // => captures the 'this' reference
             window.requestAnimationFrame(() => this._animate());
+        }
+    }
+
+    // Go2机器狗行走
+    go2_walk(direction, speed, duration) {
+        console.log('Go2 walk command:', direction, speed, duration);
+        
+        if (this.robot.walkControl) {
+            switch (direction) {
+                case 'FORWARD':
+                    this.robot.walkControl.forward(speed, duration);
+                    break;
+                case 'BACKWARD':
+                    this.robot.walkControl.backward(speed, duration);
+                    break;
+                case 'LEFT':
+                    this.robot.walkControl.turnLeft(speed, duration);
+                    break;
+                case 'RIGHT':
+                    this.robot.walkControl.turnRight(speed, duration);
+                    break;
+                case 'STOP':
+                    this.robot.walkControl.stop();
+                    break;
+            }
+        }
+        
+        // 等待指定时间，让动画完成
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve();
+            }, duration * 1000);
+        });
+    }
+
+    // Go2机器狗姿态
+    go2_pose(poseType) {
+        console.log('Go2 pose command:', poseType);
+        
+        if (this.robot.poseControl) {
+            switch (poseType) {
+                case 'STAND':
+                    this.robot.poseControl.stand();
+                    break;
+                case 'SQUAT':
+                    this.robot.poseControl.squat();
+                    break;
+                case 'LIE_DOWN':
+                    this.robot.poseControl.lieDown();
+                    break;
+                case 'JUMP':
+                    this.robot.poseControl.jump();
+                    break;
+            }
+        }
+    }
+
+    // Go2机器狗腿部控制
+    go2_leg_control(leg, hipAngle, thighAngle, calfAngle) {
+        console.log('Go2 leg control:', leg, hipAngle, thighAngle, calfAngle);
+        
+        // 这里可以实现具体的腿部控制逻辑
+        // 根据leg参数设置对应腿部的关节角度
+    }
+
+    // Go2机器狗物理引擎控制
+    go2_physics(action) {
+        console.log('Go2 physics command:', action);
+        
+        if (this.robot.physicsControl) {
+            switch (action) {
+                case 'ENABLE_GRAVITY':
+                    this.robot.physicsControl.enableGravity();
+                    break;
+                case 'DISABLE_GRAVITY':
+                    this.robot.physicsControl.disableGravity();
+                    break;
+                case 'DROP_TEST':
+                    this.robot.physicsControl.dropTest();
+                    break;
+                case 'RESET_POSITION':
+                    this.robot.physicsControl.resetPosition();
+                    break;
+            }
+        }
+    }
+
+    // Go2机器狗传感器
+    go2_sensor(sensorType) {
+        console.log('Go2 sensor request:', sensorType);
+        
+        // 返回模拟的传感器数据
+        switch (sensorType) {
+            case 'IMU':
+                return 0.0;
+            case 'JOINT_POSITIONS':
+                return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+            case 'FOOT_CONTACT':
+                return [true, true, true, true];
+            case 'BATTERY':
+                return 100.0;
+            default:
+                return 0.0;
         }
     }
 }

@@ -6,7 +6,7 @@ import { localize } from "../helpers";
 import { msgBoxInfo } from "../alert";
 
 
-const theRobots = ['Franka', 'Niryo', 'Sawyer'];
+const theRobots = ['Franka', 'Niryo', 'Sawyer', 'Go2'];
 let currentRobotIdx = 0;
 {
     let currentRobot = getDesiredRobot().toLowerCase();
@@ -250,3 +250,6 @@ function resetRobot(robot, renderCallback) {
     }
     renderCallback();
 }
+
+
+
