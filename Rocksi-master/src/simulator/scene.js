@@ -9,6 +9,8 @@ import {
     PolarGridHelper,
     HemisphereLight,
     PointLight,
+    SpotLight,
+    DirectionalLight,
     Mesh,
     SphereGeometry,
     Color,
@@ -22,7 +24,7 @@ import {
 } from "three";
 
 //Imports for managing objects and physics
-import { initCannon } from './physics';
+import { initCannon, getWorld, addBodyToWorld } from './physics';
 
 import { remControledSimObject, setSimObjectHighlight,
          setTCSimObjectsOnClick } from './objects/createObjects';
@@ -63,6 +65,10 @@ switch (selectedRobot.toLowerCase()) {
 		robot = require('./robots/sawyer');
 		break;
 
+	case 'unitree_go2':
+		robot = require('./robots/go2');
+		break;
+
 	default:
 		throw ('Unknown robot \'' + selectedRobot + '\'');
 }
@@ -83,21 +89,52 @@ const renderCallbacks = [];
 
 loadRobotModel(robot.xacro)
 	.then(model => {
+		console.log('Robot model loaded successfully:', model);
 		robot.init(model);
-		$('.robot-info').on('click', evt => popInfo(robot.info.DE))
+		console.log('Robot initialized:', robot);
+		
+		if (robot.info && robot.info.DE) {
+			$('.robot-info').on('click', evt => popInfo(robot.info.DE))
+		}
 		robot.setPose(robot.defaultPose);
+		
+		// 设置机器人初始位置，让脚部接触地面
+		if (robot.initialPosition) {
+			console.log('Setting robot initial position:', robot.initialPosition);
+			// 设置整个机器人模型的位置
+			if (robot.model) {
+				robot.model.position.set(robot.initialPosition[0], robot.initialPosition[1], robot.initialPosition[2]);
+				console.log('Robot model position set to:', robot.model.position);
+			}
+			// 也设置根链接的位置
+			const rootLink = robot.model.links[robot.robotRoot];
+			if (rootLink) {
+				rootLink.position.set(robot.initialPosition[0], robot.initialPosition[1], robot.initialPosition[2]);
+				console.log('Root link position set to:', rootLink.position);
+			}
+		}
 
 		initScene();
         initCannon();
+        
+        // 如果机器人启用了物理引擎，初始化物理体
+        if (robot.enablePhysics) {
+            console.log('Initializing physics for robot:', robot.name);
+            initRobotPhysics(robot);
+        }
 
 		ik = new IKSolver(scene, robot);
 		Simulation.init(robot, ik, ikRender);
+		
+		// 确保加载动画被隐藏
+		$('.loading-lightbox').hide();
 	}, reason => {
-		console.error(reason);
+		console.error('Failed to load robot model:', reason);
 	});
 
 
 function loadRobotModel(url) {
+	console.log('Loading robot model from:', url);
 	return new Promise((resolve, reject) => {
 		const xacroLoader = new XacroLoader();
 		xacroLoader.inOrder = true;
@@ -105,7 +142,9 @@ function loadRobotModel(url) {
 		xacroLoader.localProperties = true;
 
 		xacroLoader.rospackCommands.find = (...args) => {
-			return path.join(robot.root, ...args);
+			const result = path.join(robot.root, ...args);
+			console.log('rospack find:', args, '->', result);
+			return result;
 		}
 
 		for (let cmd in robot.rosMacros) {
@@ -115,16 +154,29 @@ function loadRobotModel(url) {
 		xacroLoader.load(
 			url,
 			(xml) => {
-				let manager = new LoadingManager(onLoadComplete, render);
+				console.log('Xacro loaded successfully, parsing URDF...');
+				let manager = new LoadingManager(onLoadComplete, () => {
+					// 安全的渲染回调
+					if (typeof render === 'function' && renderer) {
+						render();
+					}
+				});
 				const urdfLoader = new URDFLoader(manager);
 				urdfLoader.packages = robot.packages;
 				urdfLoader.workingPath = LoaderUtils.extractUrlBase(url);
 
 				let model = urdfLoader.parse(xml);
+				console.log('URDF parsed successfully:', model);
+				
+				// 手动触发加载完成回调
+				setTimeout(() => {
+					onLoadComplete();
+				}, 100);
+				
 				resolve(model);
 			},
 			(error) => {
-				console.error(error);
+				console.error('Xacro loading failed:', error);
 				reject(error);
 			}
 		);
@@ -134,6 +186,19 @@ function loadRobotModel(url) {
 function onLoadComplete() {
 	$('.loading-lightbox').hide();
 	robot.onLoadComplete();
+	
+	// 为Go2机器人设置正确的地面位置
+	if (robot.name === 'Go2' && robot.initialPosition) {
+		console.log('Setting Go2 robot position to ground level');
+		if (robot.model && robot.model.position) {
+			robot.model.position.set(
+				robot.initialPosition[0],
+				robot.initialPosition[1], 
+				robot.initialPosition[2]
+			);
+			console.log('Go2 robot positioned at:', robot.model.position);
+		}
+	}
 }
 
 
@@ -177,12 +242,17 @@ function initScene() {
 	const light = new HemisphereLight(0xffeeee, 0x111122);
 	scene.add(light);
 
-	const pointLight = new PointLight(0xffffff, 0.3);
-	//pointLight.castShadow = true;
-	//particleLight.add(pointLight);
-	//particleLight.position.set(30, 40, 30);
+	const pointLight = new PointLight(0xffffff, 0.5);
 	pointLight.position.set(30, 30, 40);
 	scene.add(pointLight);
+
+	// 为Go2机器人添加更好的光照
+	if (robot.name === 'Go2') {
+		// 添加填充光
+		const fillLight = new DirectionalLight(0x404040, 0.3);
+		fillLight.position.set(-10, 10, 10);
+		scene.add(fillLight);
+	}
 
 	renderer = new WebGLRenderer();
 	renderer.sortObjects = false;
@@ -235,6 +305,9 @@ function initScene() {
 	onCanvasResize();
 
 	GUI.initGui(robot, cameraControl, ikRender);
+	
+	// 启动TWEEN动画循环
+	startTweenLoop();
 }
 
 function onCanvasResize() {
@@ -285,11 +358,31 @@ function updateGroundLine() {
 }
 
 function render() {
-    renderer.render(scene, camera);
+    if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+    }
 
 	for (let cb of renderCallbacks) {
 		cb(robot);
 	}
+}
+
+// 添加持续的TWEEN更新循环
+function startTweenLoop() {
+    var TWEEN = require('@tweenjs/tween.js');
+    
+    function animateTween(time) {
+        TWEEN.update(time);
+        
+        // 强制渲染场景以显示动画
+        if (renderer && scene && camera) {
+            renderer.render(scene, camera);
+        }
+        
+        requestAnimationFrame(animateTween);
+    }
+    
+    requestAnimationFrame(animateTween);
 }
 
 export function enablePointerEvents() {
@@ -427,3 +520,87 @@ export function getControl () {
     }
     return contObj;
 }
+
+// 初始化机器人物理引擎
+function initRobotPhysics(robot) {
+    console.log('Initializing robot physics for:', robot.name);
+    
+    const world = getWorld();
+    if (!world) {
+        console.error('Physics world not initialized');
+        return;
+    }
+    
+    // 为机器人的每个链接创建物理体
+    for (const linkName in robot.model.links) {
+        const link = robot.model.links[linkName];
+        if (link && link.geometry) {
+            // 创建物理体
+            const body = createPhysicsBodyForLink(link, robot);
+            if (body) {
+                // 设置物理体的初始位置
+                if (robot.initialPosition) {
+                    body.position.set(robot.initialPosition[0], robot.initialPosition[1], robot.initialPosition[2]);
+                }
+                // 将物理体添加到世界
+                world.addBody(body);
+                console.log('Added physics body for link:', linkName, 'at position:', body.position);
+            }
+        }
+    }
+    
+    // 启动物理模拟
+    startPhysicsSimulation();
+}
+
+// 启动物理模拟
+function startPhysicsSimulation() {
+    console.log('Starting physics simulation...');
+    
+    // 添加物理模拟更新到渲染循环
+    const updatePhysics = () => {
+        const world = getWorld();
+        if (world) {
+            world.step(1/60); // 60 FPS物理更新
+        }
+        requestAnimationFrame(updatePhysics);
+    };
+    
+    updatePhysics();
+}
+
+// 为链接创建物理体
+function createPhysicsBodyForLink(link, robot) {
+    const CANNON = require('cannon-es');
+    
+    // 根据几何体类型创建物理体
+    if (link.geometry.type === 'BoxGeometry') {
+        const size = link.geometry.parameters;
+        const shape = new CANNON.Box(new CANNON.Vec3(size.width/2, size.height/2, size.depth/2));
+        const body = new CANNON.Body({ mass: 1 });
+        body.addShape(shape);
+        body.position.copy(link.position);
+        return body;
+    }
+    else if (link.geometry.type === 'CylinderGeometry') {
+        const params = link.geometry.parameters;
+        const shape = new CANNON.Cylinder(params.radiusTop, params.radiusBottom, params.height, params.radialSegments);
+        const body = new CANNON.Body({ mass: 1 });
+        body.addShape(shape);
+        body.position.copy(link.position);
+        return body;
+    }
+    else if (link.geometry.type === 'SphereGeometry') {
+        const params = link.geometry.parameters;
+        const shape = new CANNON.Sphere(params.radius);
+        const body = new CANNON.Body({ mass: 1 });
+        body.addShape(shape);
+        body.position.copy(link.position);
+        return body;
+    }
+    
+    return null;
+}
+
+
+

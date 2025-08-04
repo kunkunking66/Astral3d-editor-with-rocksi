@@ -31,6 +31,7 @@ import './blocks/helpers'
 import './blocks/movement'
 import './blocks/objects'
 import './blocks/extras'
+import './blocks/go2_movement'
 import './generators/javascript'
 
 // Toolbox XML is imported for parcel
